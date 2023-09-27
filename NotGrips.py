@@ -35,12 +35,12 @@ class PersonDatabaseApp(QMainWindow):
         left_layout.addWidget(self.last_name_input)
 
         self.id_input = QLineEdit()
-        self.id_input.setPlaceholderText("9-digit ID Number")
+        self.id_input.setPlaceholderText("Alien Number")
         self.id_input.setMinimumHeight(30)
         left_layout.addWidget(self.id_input)
 
         self.Bin_input = QLineEdit()
-        self.Bin_input.setPlaceholderText("Number (1-670)")
+        self.Bin_input.setPlaceholderText("Bin")
         self.Bin_input.setMinimumHeight(30)
 
         # Add QIntValidator to enforce integer input within the specified range
@@ -56,7 +56,7 @@ class PersonDatabaseApp(QMainWindow):
         left_layout.addWidget(self.Unit)
 
         self.Bed_input = QLineEdit()
-        self.Bed_input.setPlaceholderText("3-digit Subgroup")
+        self.Bed_input.setPlaceholderText("Bed")
         self.Bed_input.setMinimumHeight(30)
         left_layout.addWidget(self.Bed_input)
 
@@ -181,9 +181,12 @@ class PersonDatabaseApp(QMainWindow):
                 self.table_widget.setItem(row_num, col_num, QTableWidgetItem(str(cell_data)))
 
     def show_all_records(self):
-        self.cursor.execute("SELECT * FROM persons")
+        self.cursor.execute("""
+            SELECT first_name, last_name, id_number, Bin, Unit, Bed, date, level
+            FROM persons
+        """)
         results = self.cursor.fetchall()
-        
+
         if not results:
             QMessageBox.information(self, "No Records", "There are no records in the database.")
         else:
