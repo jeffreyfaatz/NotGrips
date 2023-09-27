@@ -6,6 +6,22 @@ from PyQt5.QtCore import QDate
 
 
 class PersonDatabaseApp(QMainWindow):
+    
+    # Define the unit_bed_options dictionary here as a class attribute
+    unit_bed_options = {
+        "A1": ["110A", "110B", "111A", "111B", "112A", "112B", "113A", "113B", "114A", "114B", "115A", "115B", "116A", "116B", "117A", "117B", "118A", "118B", "119A", "119B", "120A", "120B"],
+        "A2": ["121A", "121B", "122A", "122B", "123A", "123B", "124A", "124B", "125A", "125B", "126A", "126B", "127A", "127B", "128A", "128B", "129A", "129B", "130A", "130B"],
+        "B1": ["131A", "131B", "132A", "132B", "133A", "133B", "134A", "134B", "135A", "135B", "136A", "136B", "137A", "137B", "138A", "138B", "139A", "139B", "140A", "140B"],
+        "B2": [str(i) for i in range(141, 201)],
+        "B3": [str(i) for i in range(201, 262)],
+        "C1": [str(i) for i in range(262, 321)],
+        "C2": [str(i) for i in range(321, 382)],
+        "C3": [str(i) for i in range(382, 441)],
+        "C4": [str(i) for i in range(441, 501)],
+        "SHU": [str(i) for i in range(110, 145)],
+        "MHU": ["118A", "118B", "122", "123"]
+    }
+    
     def __init__(self):
         super().__init__()
 
@@ -24,45 +40,67 @@ class PersonDatabaseApp(QMainWindow):
         # Left column for input fields and buttons
         left_layout = QVBoxLayout()
 
+        first_name_label = QLabel("First Name:")
+        left_layout.addWidget(first_name_label)
+
         self.first_name_input = QLineEdit()
         self.first_name_input.setPlaceholderText("First Name")
         self.first_name_input.setMinimumHeight(30)  # Increase the height by setting the minimum height
         left_layout.addWidget(self.first_name_input)
+
+        last_name_label = QLabel("Last Name:")
+        left_layout.addWidget(last_name_label)
 
         self.last_name_input = QLineEdit()
         self.last_name_input.setPlaceholderText("Last Name")
         self.last_name_input.setMinimumHeight(30)
         left_layout.addWidget(self.last_name_input)
 
+        id_label = QLabel("Alien Number:")
+        left_layout.addWidget(id_label)
+
         self.id_input = QLineEdit()
         self.id_input.setPlaceholderText("Alien Number")
         self.id_input.setMinimumHeight(30)
         left_layout.addWidget(self.id_input)
 
-        self.Bin_input = QLineEdit()
-        self.Bin_input.setPlaceholderText("Bin")
+        Bin_label = QLabel("Bin:")
+        left_layout.addWidget(Bin_label)
+
+        self.Bin_input = QComboBox()
+
+        for i in range(1, 671):
+            self.Bin_input.addItem(str(i))
+
+        self.Bin_input.setCurrentIndex(-1)
         self.Bin_input.setMinimumHeight(30)
-
-        # Add QIntValidator to enforce integer input within the specified range
-        validator = QIntValidator(1, 670)
-        self.Bin_input.setValidator(validator)
-
         left_layout.addWidget(self.Bin_input)
 
+        Unit_label = QLabel("Unit:")
+        left_layout.addWidget(Unit_label)
 
         self.Unit = QComboBox()
         self.Unit.addItems(["A1", "A2", "B1", "B2", "B3", "C1", "C2", "C3", "C4", "SHU", "MHU"])
         self.Unit.setMinimumHeight(30)
+        self.Unit.setCurrentIndex(-1)  # Set to no current index
         left_layout.addWidget(self.Unit)
 
-        self.Bed_input = QLineEdit()
+        Bed_label = QLabel("Bed:")
+        left_layout.addWidget(Bed_label)
+
+        self.Bed_input = QComboBox()  # Change to QComboBox
         self.Bed_input.setPlaceholderText("Bed")
         self.Bed_input.setMinimumHeight(30)
+        self.Bed_input.setCurrentIndex(-1)  # Set to no current index
         left_layout.addWidget(self.Bed_input)
+
+        level_label = QLabel("Level:")
+        left_layout.addWidget(level_label)
 
         self.level_combo = QComboBox()
         self.level_combo.addItems(["L", "ML", "MH", "MHV", "H"])
         self.level_combo.setMinimumHeight(30)
+        self.level_combo.setCurrentIndex(-1)  # Set to no current index
         left_layout.addWidget(self.level_combo)
 
         self.date_input = QDateEdit(QDate.currentDate())  # Set the current date
@@ -72,6 +110,9 @@ class PersonDatabaseApp(QMainWindow):
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.save_person)
         left_layout.addWidget(self.save_button)
+
+        # Connect the Unit combo box to the update_bed_options method
+        self.Unit.currentTextChanged.connect(self.update_bed_options)
 
         # Right column for the table widget
         right_layout = QVBoxLayout()
@@ -127,6 +168,15 @@ class PersonDatabaseApp(QMainWindow):
         """)
         self.conn.commit()
 
+    def update_bed_options(self):
+        selected_unit = self.Unit.currentText()
+        bed_options = self.unit_bed_options.get(selected_unit, [])
+        self.Bed_input.clear()
+        self.Bed_input.addItems(bed_options)
+
+        # Connect the Unit combo box to the update_bed_options method
+        self.Unit.currentTextChanged.connect(self.update_bed_options)
+
     def save_person(self):
         first_name = self.first_name_input.text()
         last_name = self.last_name_input.text()
@@ -151,7 +201,6 @@ class PersonDatabaseApp(QMainWindow):
         self.conn.commit()
 
         print("Data saved to the database.")
-
 
 
     def search_person(self):
@@ -180,6 +229,7 @@ class PersonDatabaseApp(QMainWindow):
             for col_num, cell_data in enumerate(row_data):
                 self.table_widget.setItem(row_num, col_num, QTableWidgetItem(str(cell_data)))
 
+
     def show_all_records(self):
         self.cursor.execute("""
             SELECT first_name, last_name, id_number, Bin, Unit, Bed, date, level
@@ -191,6 +241,7 @@ class PersonDatabaseApp(QMainWindow):
             QMessageBox.information(self, "No Records", "There are no records in the database.")
         else:
             self.populate_table(results)
+
 
     def sort_table(self, logical_index):
         self.table_widget.sortItems(logical_index)
