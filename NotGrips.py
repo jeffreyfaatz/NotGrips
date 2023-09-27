@@ -2,7 +2,7 @@ import sys
 import sqlite3
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QDateEdit, QTableWidget, QTableWidgetItem, QMessageBox, QHeaderView, QHBoxLayout
 from PyQt5.QtGui import QIntValidator
-from PyQt5.QtCore import QDate
+from PyQt5.QtCore import QDate, Qt
 
 
 class PersonDatabaseApp(QMainWindow):
@@ -33,6 +33,7 @@ class PersonDatabaseApp(QMainWindow):
 
         self.init_ui()
         self.init_database()
+        self.load_used_options()  # Load used options on application startup
 
     def init_ui(self):
         layout = QHBoxLayout()  # Use a horizontal layout to split the window
@@ -59,7 +60,7 @@ class PersonDatabaseApp(QMainWindow):
         id_label = QLabel("Alien Number:")
         left_layout.addWidget(id_label)
 
-        self.id_input = QLineEdit()
+        self.id_input = QComboBox()
         self.id_input.setPlaceholderText("Alien Number")
         self.id_input.setMinimumHeight(30)
         left_layout.addWidget(self.id_input)
@@ -122,6 +123,9 @@ class PersonDatabaseApp(QMainWindow):
         self.table_widget.setHorizontalHeaderLabels(["First Name", "Last Name", "ID", "Bin", "Unit", "Bed", "Date", "Level"])
         right_layout.addWidget(self.table_widget)
 
+        # Enable sorting for the QTableWidget:
+        self.table_widget.setSortingEnabled(True)
+
         # Add both left and right layouts to the main layout
         layout.addLayout(left_layout)
         layout.addLayout(right_layout)
@@ -143,6 +147,11 @@ class PersonDatabaseApp(QMainWindow):
         self.run_report_button.clicked.connect(self.show_all_records)
         self.run_report_button.setMinimumHeight(30)
         sub_layout.addWidget(self.run_report_button)
+
+        # Add the "Release" button for deleting rows
+        self.release_button = QPushButton("Release")
+        self.release_button.clicked.connect(self.release_person)
+        sub_layout.addWidget(self.release_button)
 
         # Add the sub-layout to the left column
         left_layout.addLayout(sub_layout)
@@ -181,9 +190,9 @@ class PersonDatabaseApp(QMainWindow):
         first_name = self.first_name_input.text()
         last_name = self.last_name_input.text()
         id_number = self.id_input.text()
-        Bin = self.Bin_input.text()
+        Bin = self.Bin_input.currentText()
         Unit = self.Unit.currentText()
-        Bed = self.Bed_input.text()
+        Bed = self.Bed_input.currentText()
         date = self.date_input.date().toString("yyyy-MM-dd")
         level = self.level_combo.currentText()
 
@@ -192,16 +201,46 @@ class PersonDatabaseApp(QMainWindow):
             QMessageBox.warning(self, "Invalid ID Number", "Alien number must be 9 digits")
             return  # Exit the method without saving
 
-        # Validate the input data as needed
+        # Check if the ID number is already in use
+        if self.is_id_number_used(id_number):
+            QMessageBox.warning(self, "Duplicate Alien Number", "Alien number is already in use.")
+            return  # Exit the method without saving
 
-        self.cursor.execute("""
-            INSERT INTO persons (first_name, last_name, id_number, Bin, Unit, Bed, date, level)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (first_name, last_name, id_number, Bin, Unit, Bed, date, level))
-        self.conn.commit()
+        try:
+            with self.conn:
+                self.cursor.execute("""
+                    INSERT INTO persons (first_name, last_name, id_number, Bin, Unit, Bed, date, level)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (first_name, last_name, id_number, Bin, Unit, Bed, date, level))
+            # Remove the used options from drop-downs
+            self.remove_used_options(id_number, Bin, Bed)
+            print("Data saved to the database.")
+        except sqlite3.Error as e:
+            print("Error:", e)
 
-        print("Data saved to the database.")
 
+    def is_id_number_used(self, id_number):
+        self.cursor.execute("SELECT id_number FROM persons WHERE id_number = ?", (id_number,))
+        result = self.cursor.fetchone()
+        return result is not None
+
+    def remove_used_options(self, id_number, Bin, Unit, Bed):
+        # Remove used options from the respective drop-downs
+        if Unit in self.unit_bed_options:
+            self.unit_bed_options[Unit].remove(Bed)
+        self.Unit.removeItem(self.Unit.findText(Unit))
+        self.Bin_input.removeItem(self.Bin_input.findText(Bin))
+        self.Bed_input.removeItem(self.Bed_input.findText(Bed))
+
+    def release_person(self):
+        # Get the selected row and delete it from the database
+        selected_row = self.table_widget.currentRow()
+        if selected_row >= 0:
+            id_number = self.table_widget.item(selected_row, 1).text()  # Assuming the ID is in the 3rd column (index 2)
+            self.cursor.execute("DELETE FROM persons WHERE id_number = ?", (id_number,))
+            self.conn.commit()
+            # Remove the row from the table
+            self.table_widget.removeRow(selected_row)
 
     def search_person(self):
         search_text = self.search_input.text()
@@ -246,7 +285,38 @@ class PersonDatabaseApp(QMainWindow):
     def sort_table(self, logical_index):
         self.table_widget.sortItems(logical_index)
 
+    def init_database(self):
+        self.conn = sqlite3.connect("person_database.db")
+        self.cursor = self.conn.cursor()
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS persons (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                first_name TEXT,
+                last_name TEXT,
+                id_number TEXT,
+                Bin INTEGER,
+                Unit TEXT,
+                Bed TEXT,
+                date TEXT,
+                level TEXT
+            )
+        """)
+        self.conn.commit()
 
+    def load_used_options(self):
+        # Load used options (id_number, Bin, Bed) from the database
+        self.cursor.execute("SELECT id_number, Bin, Bed FROM persons")
+        used_options = self.cursor.fetchall()
+
+        for option in used_options:
+            id_number, Bin, Bed = option
+            # Disable the used options in their respective drop-downs
+            if id_number:
+                self.id_input.addItem(id_number)
+            if Bin:
+                self.Bin_input.addItem(Bin)
+            if Bed:
+                self.Bed_input.addItem(Bed)
 
 def main():
     app = QApplication(sys.argv)
