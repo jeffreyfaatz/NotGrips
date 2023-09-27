@@ -1,6 +1,9 @@
 import sys
 import sqlite3
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QDateEdit, QTableWidget, QTableWidgetItem
+from PyQt5.QtGui import QIntValidator
+from PyQt5.QtWidgets import QMessageBox
+
 
 class PersonDatabaseApp(QMainWindow):
     def __init__(self):
@@ -28,10 +31,12 @@ class PersonDatabaseApp(QMainWindow):
 
         self.id_input = QLineEdit()
         self.id_input.setPlaceholderText("9-digit ID Number")
+        id_validator = QIntValidator(100000000, 999999999, self)  # Restrict input to 9 digits
+        self.id_input.setValidator(id_validator)
         layout.addWidget(self.id_input)
 
         self.Bin_input = QLineEdit()
-        self.Bin_input.setPlaceholderText("Number (1-670)")
+        self.Bin_input.setPlaceholderText("Bin")
         layout.addWidget(self.Bin_input)
 
         self.Unit = QComboBox()
@@ -39,7 +44,7 @@ class PersonDatabaseApp(QMainWindow):
         layout.addWidget(self.Unit)
 
         self.Bed_input = QLineEdit()
-        self.Bed_input.setPlaceholderText("3-digit Subgroup")
+        self.Bed_input.setPlaceholderText("Bed")
         layout.addWidget(self.Bed_input)
 
         self.date_input = QDateEdit()
@@ -90,11 +95,16 @@ class PersonDatabaseApp(QMainWindow):
         first_name = self.first_name_input.text()
         last_name = self.last_name_input.text()
         id_number = self.id_input.text()
-        Bin = self.number_input.text()  # Update this line
-        Unit = self.group_combo.currentText()
-        Bed = self.subgroup_input.text()
+        Bin = self.Bin_input.text()
+        Unit = self.Unit.currentText()
+        Bed = self.Bed_input.text()
         date = self.date_input.date().toString("yyyy-MM-dd")
         level = self.level_combo.currentText()
+
+        # Check if the ID number is 9 digits
+        if len(id_number) != 9:
+            QMessageBox.warning(self, "Invalid ID Number", "Alien number must be 9 digits")
+            return  # Exit the method without saving
 
         # Validate the input data as needed
 
@@ -113,12 +123,15 @@ class PersonDatabaseApp(QMainWindow):
 
         self.cursor.execute("""
             SELECT * FROM persons
-            WHERE first_name LIKE ? OR last_name LIKE ? OR id_number LIKE ? OR Bin LIKE ?  -- Update this line
+            WHERE first_name LIKE ? OR last_name LIKE ? OR id_number LIKE ? OR Bin LIKE ?
         """, ('%' + search_text + '%', '%' + search_text + '%', '%' + search_text + '%', '%' + search_text + '%'))
 
         results = self.cursor.fetchall()
-        self.populate_table(results)
 
+        if not results:
+            QMessageBox.information(self, "No Results", "No results to match your search.")
+        else:
+            self.populate_table(results)
 
 
     def populate_table(self, data):
