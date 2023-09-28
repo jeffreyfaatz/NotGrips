@@ -35,6 +35,8 @@ class PersonDatabaseApp(QMainWindow):
         self.init_database()
         self.load_used_options()  # Load used options on application startup
 
+        self.update_bed_options()  #Update Bed options on startup
+
     def init_ui(self):
         layout = QHBoxLayout()  # Use a horizontal layout to split the window
 
@@ -60,7 +62,7 @@ class PersonDatabaseApp(QMainWindow):
         id_label = QLabel("Alien Number:")
         left_layout.addWidget(id_label)
 
-        self.id_input = QComboBox()
+        self.id_input = QLineEdit()
         self.id_input.setPlaceholderText("Alien Number")
         self.id_input.setMinimumHeight(30)
         left_layout.addWidget(self.id_input)
@@ -183,9 +185,6 @@ class PersonDatabaseApp(QMainWindow):
         self.Bed_input.clear()
         self.Bed_input.addItems(bed_options)
 
-        # Connect the Unit combo box to the update_bed_options method
-        self.Unit.currentTextChanged.connect(self.update_bed_options)
-
     def save_person(self):
         first_name = self.first_name_input.text()
         last_name = self.last_name_input.text()
@@ -203,7 +202,8 @@ class PersonDatabaseApp(QMainWindow):
 
         # Check if the ID number is already in use
         if self.is_id_number_used(id_number):
-            QMessageBox.warning(self, "Duplicate Alien Number", "Alien number is already in use.")
+            QMessageBox.warning(self, "Duplicate Alien Number", "Alien number is already in use. Please enter a new 9-digit number.")
+            self.id_input.clear()  # Clear the input to allow entering a new number
             return  # Exit the method without saving
 
         try:
@@ -213,7 +213,7 @@ class PersonDatabaseApp(QMainWindow):
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """, (first_name, last_name, id_number, Bin, Unit, Bed, date, level))
             # Remove the used options from drop-downs
-            self.remove_used_options(id_number, Bin, Bed)
+            self.remove_used_options(Bin, Unit, Bed)
             print("Data saved to the database.")
         except sqlite3.Error as e:
             print("Error:", e)
@@ -224,23 +224,24 @@ class PersonDatabaseApp(QMainWindow):
         result = self.cursor.fetchone()
         return result is not None
 
-    def remove_used_options(self, id_number, Bin, Unit, Bed):
+    def remove_used_options(self, Bin, Unit, Bed):
         # Remove used options from the respective drop-downs
         if Unit in self.unit_bed_options:
             self.unit_bed_options[Unit].remove(Bed)
-        self.Unit.removeItem(self.Unit.findText(Unit))
         self.Bin_input.removeItem(self.Bin_input.findText(Bin))
         self.Bed_input.removeItem(self.Bed_input.findText(Bed))
 
     def release_person(self):
-        # Get the selected row and delete it from the database
+        # Get the selected row
         selected_row = self.table_widget.currentRow()
         if selected_row >= 0:
-            id_number = self.table_widget.item(selected_row, 1).text()  # Assuming the ID is in the 3rd column (index 2)
+            # Fetch the ID number from the database using the row index
+            id_number = self.table_widget.item(selected_row, 2).text()
             self.cursor.execute("DELETE FROM persons WHERE id_number = ?", (id_number,))
             self.conn.commit()
             # Remove the row from the table
             self.table_widget.removeRow(selected_row)
+
 
     def search_person(self):
         search_text = self.search_input.text()
@@ -304,19 +305,20 @@ class PersonDatabaseApp(QMainWindow):
         self.conn.commit()
 
     def load_used_options(self):
-        # Load used options (id_number, Bin, Bed) from the database
-        self.cursor.execute("SELECT id_number, Bin, Bed FROM persons")
+        # Load used options (Bin, Unit, Bed) from the database
+        self.cursor.execute("SELECT Bin, Unit, Bed FROM persons")
         used_options = self.cursor.fetchall()
 
         for option in used_options:
-            id_number, Bin, Bed = option
+            Bin, Unit, Bed = option
             # Disable the used options in their respective drop-downs
-            if id_number:
-                self.id_input.addItem(id_number)
             if Bin:
-                self.Bin_input.addItem(Bin)
+                self.Bin_input.removeItem(self.Bin_input.findText(str(Bin)))  # Convert Bin to a string before adding it
+            if Unit:
+                self.Unit.addItem(Unit)
             if Bed:
                 self.Bed_input.addItem(Bed)
+
 
 def main():
     app = QApplication(sys.argv)
