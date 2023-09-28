@@ -306,7 +306,7 @@ class PersonDatabaseApp(QMainWindow):
 
     def load_used_options(self):
         # Load used options (Bin, Unit, Bed) from the database
-        self.cursor.execute("SELECT Bin, Unit, Bed FROM persons")
+        self.cursor.execute("SELECT DISTINCT Bin, Unit, Bed FROM persons")
         used_options = self.cursor.fetchall()
 
         for option in used_options:
@@ -314,10 +314,8 @@ class PersonDatabaseApp(QMainWindow):
             # Disable the used options in their respective drop-downs
             if Bin:
                 self.Bin_input.removeItem(self.Bin_input.findText(str(Bin)))  # Convert Bin to a string before adding it
-            if Unit:
-                self.Unit.addItem(Unit)
             if Bed:
-                self.Bed_input.addItem(Bed)
+                self.Bed_input.removeItem(self.Bed_input.findText(Bed))
 
 
 def main():
