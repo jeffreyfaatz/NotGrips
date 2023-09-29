@@ -186,6 +186,19 @@ class PersonDatabaseApp(QMainWindow):
         self.Bed_input.clear()
         self.Bed_input.addItems(bed_options)
 
+    def load_used_options(self):
+        # Load used options (Bin, Unit, Bed) from the database
+        self.cursor.execute("SELECT DISTINCT Bin, Unit, Bed FROM persons")
+        used_options = self.cursor.fetchall()
+
+        for option in used_options:
+            Bin, Unit, Bed = option
+            # Disable the used options in their respective drop-downs
+            if Bin:
+                self.Bin_input.removeItem(self.Bin_input.findText(str(Bin)))  # Convert Bin to a string before adding it
+            if Bed:
+                self.Bed_input.removeItem(self.Bed_input.findText(Bed))
+
     def save_person(self):
         first_name = self.first_name_input.text()
         last_name = self.last_name_input.text()
@@ -287,18 +300,7 @@ class PersonDatabaseApp(QMainWindow):
     def sort_table(self, logical_index):
         self.table_widget.sortItems(logical_index)
 
-    def load_used_options(self):
-        # Load used options (Bin, Unit, Bed) from the database
-        self.cursor.execute("SELECT DISTINCT Bin, Unit, Bed FROM persons")
-        used_options = self.cursor.fetchall()
 
-        for option in used_options:
-            Bin, Unit, Bed = option
-            # Disable the used options in their respective drop-downs
-            if Bin:
-                self.Bin_input.removeItem(self.Bin_input.findText(str(Bin)))  # Convert Bin to a string before adding it
-            if Bed:
-                self.Bed_input.removeItem(self.Bed_input.findText(Bed))
 
 
 def main():
