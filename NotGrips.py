@@ -198,6 +198,8 @@ class PersonDatabaseApp(QMainWindow):
                 self.Bin_input.removeItem(self.Bin_input.findText(str(Bin)))  # Convert Bin to a string before adding it
             if Bed:
                 self.Bed_input.removeItem(self.Bed_input.findText(Bed))
+                if Unit in self.unit_bed_options and Bed in self.unit_bed_options[Unit]:
+                    self.unit_bed_options[Unit].remove(Bed)
 
     def save_person(self):
         first_name = self.first_name_input.text()
@@ -299,8 +301,6 @@ class PersonDatabaseApp(QMainWindow):
 
     def sort_table(self, logical_index):
         self.table_widget.sortItems(logical_index)
-
-
 
 
 def main():
