@@ -310,10 +310,32 @@ class PersonDatabaseApp(QMainWindow):
     def refresh_database(self):
         # Clear existing data in the table widget
         self.table_widget.setRowCount(0)
-        
-        # Reload the data from the database
+
+        # Reload the data from the database for beds and bins
         self.load_used_options()
+
+        # Update the Bed and Bin options
+        self.update_bed_options()
+        self.update_bin_options()
+
+        # Show all records in the table widget
         self.show_all_records()
+
+    def update_bin_options(self):
+        used_bins = self.get_used_bins()
+        all_bins = [str(i) for i in range(1, 671)]
+
+        # Remove used bins from all_bins
+        available_bins = [bin for bin in all_bins if bin not in used_bins]
+
+        self.Bin_input.clear()
+        self.Bin_input.addItems(available_bins)
+
+    def get_used_bins(self):
+        self.cursor.execute("SELECT DISTINCT Bin FROM persons WHERE Bin IS NOT NULL")
+        used_bins = [str(row[0]) for row in self.cursor.fetchall()]
+        return used_bins
+
 
 def main():
     app = QApplication(sys.argv)
