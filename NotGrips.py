@@ -33,9 +33,10 @@ class PersonDatabaseApp(QMainWindow):
 
         self.init_ui()
         self.init_database()
+        self.update_bed_options()  #Update Bed options on startup
         self.load_used_options()  # Load used options on application startup
 
-        self.update_bed_options()  #Update Bed options on startup
+        
 
     def init_ui(self):
         layout = QHBoxLayout()  # Use a horizontal layout to split the window
@@ -285,24 +286,6 @@ class PersonDatabaseApp(QMainWindow):
 
     def sort_table(self, logical_index):
         self.table_widget.sortItems(logical_index)
-
-    def init_database(self):
-        self.conn = sqlite3.connect("person_database.db")
-        self.cursor = self.conn.cursor()
-        self.cursor.execute("""
-            CREATE TABLE IF NOT EXISTS persons (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                first_name TEXT,
-                last_name TEXT,
-                id_number TEXT,
-                Bin INTEGER,
-                Unit TEXT,
-                Bed TEXT,
-                date TEXT,
-                level TEXT
-            )
-        """)
-        self.conn.commit()
 
     def load_used_options(self):
         # Load used options (Bin, Unit, Bed) from the database
