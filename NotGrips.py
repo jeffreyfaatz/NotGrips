@@ -156,6 +156,11 @@ class PersonDatabaseApp(QMainWindow):
         self.release_button.clicked.connect(self.release_person)
         sub_layout.addWidget(self.release_button)
 
+        self.refresh_button = QPushButton("Refresh")
+        self.refresh_button.clicked.connect(self.refresh_database)
+        sub_layout.addWidget(self.refresh_button)
+
+
         # Add the sub-layout to the left column
         left_layout.addLayout(sub_layout)
 
@@ -302,6 +307,13 @@ class PersonDatabaseApp(QMainWindow):
     def sort_table(self, logical_index):
         self.table_widget.sortItems(logical_index)
 
+    def refresh_database(self):
+        # Clear existing data in the table widget
+        self.table_widget.setRowCount(0)
+        
+        # Reload the data from the database
+        self.load_used_options()
+        self.show_all_records()
 
 def main():
     app = QApplication(sys.argv)
