@@ -123,6 +123,10 @@ class PersonDatabaseApp(QMainWindow):
         self.save_button.clicked.connect(self.save_person)
         left_layout.addWidget(self.save_button)
 
+        self.edit_button = QPushButton("Edit")
+        self.edit_button.clicked.connect(self.edit_person)
+        left_layout.addWidget(self.edit_button)
+
         # Connect the Unit combo box to the update_bed_options method
         self.Unit.currentTextChanged.connect(self.update_bed_options)
 
@@ -186,11 +190,11 @@ class PersonDatabaseApp(QMainWindow):
                 first_name TEXT,
                 last_name TEXT,
                 id_number TEXT,
-                birth_date TEXT,
+                birth_date DATE,
                 Bin INTEGER,
                 Unit TEXT,
                 Bed TEXT,
-                date TEXT,
+                date DATE,
                 level TEXT
             )
         """)
@@ -221,7 +225,7 @@ class PersonDatabaseApp(QMainWindow):
         first_name = self.first_name_input.text()
         last_name = self.last_name_input.text()
         id_number = self.id_input.text()
-        birth_date = self.birth_date_input.text()
+        birth_date = self.birth_date_input.date().toString("yyyy-MM-dd")
         Bin = self.Bin_input.currentText()
         Unit = self.Unit.currentText()
         Bed = self.Bed_input.currentText()
@@ -347,6 +351,54 @@ class PersonDatabaseApp(QMainWindow):
         self.cursor.execute("SELECT DISTINCT Bin FROM persons WHERE Bin IS NOT NULL")
         used_bins = [str(row[0]) for row in self.cursor.fetchall()]
         return used_bins
+    
+    def edit_person(self):
+        selected_row = self.table_widget.currentRow()
+        if selected_row >= 0:
+            # Get the data from the selected row
+            first_name = self.table_widget.item(selected_row, 0).text()
+            last_name = self.table_widget.item(selected_row, 1).text()
+            id_number = self.table_widget.item(selected_row, 2).text()
+            birth_date = self.table_widget.item(selected_row, 3).text()
+            Bin = self.table_widget.item(selected_row, 4).text()
+            Unit = self.table_widget.item(selected_row, 5).text()
+            Bed = self.table_widget.item(selected_row, 6).text()
+            date = self.table_widget.item(selected_row, 7).text()
+            level = self.table_widget.item(selected_row, 8).text()
+
+            # Populate the input fields with the data
+            self.first_name_input.setText(first_name)
+            self.last_name_input.setText(last_name)
+            self.id_input.setText(id_number)
+            self.birth_date_input.setDate(QDate.fromString(birth_date, "yyyy-MM-dd"))
+            self.Bin_input.setCurrentText(Bin)
+            self.Unit.setCurrentText(Unit)
+            self.Bed_input.setCurrentText(Bed)
+            self.date_input.setDate(QDate.fromString(date, "yyyy-MM-dd"))
+            self.level_combo.setCurrentText(level)
+
+    def insert_person(self, first_name, last_name, id_number, birth_date, Bin, Unit, Bed, date, level):
+        try:
+            with self.conn:
+                self.cursor.execute("""
+                    INSERT INTO persons (first_name, last_name, id_number, birth_date, Bin, Unit, Bed, date, level)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (first_name, last_name, id_number, birth_date, Bin, Unit, Bed, date, level))
+
+        except sqlite3.Error as e:
+            print("Error:", e)
+
+    def update_person(self, id_number, first_name, last_name, new_id_number, birth_date, Bin, Unit, Bed, date, level):
+        try:
+            with self.conn:
+                self.cursor.execute("""
+                    UPDATE persons
+                    SET first_name = ?, last_name = ?, id_number = ?, birth_date = ?, Bin = ?, Unit = ?, Bed = ?, date = ?, level = ?
+                    WHERE id_number = ?
+                """, (first_name, last_name, new_id_number, birth_date, Bin, Unit, Bed, date, level, id_number))
+
+        except sqlite3.Error as e:
+            print("Error:", e)
 
 
 def main():
