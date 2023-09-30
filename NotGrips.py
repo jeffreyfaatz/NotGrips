@@ -4,7 +4,6 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLa
 from PyQt5.QtGui import QIntValidator
 from PyQt5.QtCore import QDate, Qt
 
-
 class PersonDatabaseApp(QMainWindow):
     
     # Define the unit_bed_options dictionary here as a class attribute
@@ -134,7 +133,7 @@ class PersonDatabaseApp(QMainWindow):
         right_layout = QVBoxLayout()
 
         self.table_widget = QTableWidget()
-        self.table_widget.setColumnCount(8)
+        self.table_widget.setColumnCount(9)
         self.table_widget.setHorizontalHeaderLabels(["First Name", "Last Name", "ID", "DOB", "Bin", "Unit", "Bed", "Date", "Level"])
         right_layout.addWidget(self.table_widget)
 
@@ -225,7 +224,7 @@ class PersonDatabaseApp(QMainWindow):
         first_name = self.first_name_input.text()
         last_name = self.last_name_input.text()
         id_number = self.id_input.text()
-        birth_date = self.birth_date_input.date().toString("yyyy-MM-dd")
+        birth_date = self.birth_date_input.text()
         Bin = self.Bin_input.currentText()
         Unit = self.Unit.currentText()
         Bed = self.Bed_input.currentText()
@@ -239,21 +238,40 @@ class PersonDatabaseApp(QMainWindow):
 
         # Check if the ID number is already in use
         if self.is_id_number_used(id_number):
-            QMessageBox.warning(self, "Duplicate Alien Number", "Alien number is already in use. Please enter a new 9-digit number.")
-            self.id_input.clear()  # Clear the input to allow entering a new number
-            return  # Exit the method without saving
+            # If the ID number is in use, check if it's the same as the original ID
+            # number of the record being edited
+            selected_row = self.table_widget.currentRow()
+            if selected_row >= 0:
+                original_id_number_item = self.table_widget.item(selected_row, 2)
+                if original_id_number_item is not None:
+                    original_id_number = original_id_number_item.text()
+                    if id_number == original_id_number:
+                        # The edited ID number is the same as the original, no need to check for duplicates
+                        pass
+                    else:
+                        QMessageBox.warning(self, "Duplicate Alien Number", "Alien number is already in use. Please enter a new 9-digit number.")
+                        self.id_input.clear()  # Clear the input to allow entering a new number
+                        return  # Exit the method without saving
 
         try:
             with self.conn:
-                self.cursor.execute("""
-                    INSERT INTO persons (first_name, last_name, id_number, birth_date, Bin, Unit, Bed, date, level)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (first_name, last_name, id_number, birth_date, Bin, Unit, Bed, date, level))
+                # If you're editing an existing record, use an UPDATE statement instead of INSERT
+                selected_row = self.table_widget.currentRow()
+                if selected_row >= 0:
+                    original_id_number_item = self.table_widget.item(selected_row, 2)
+                    if original_id_number_item is not None:
+                        original_id_number = original_id_number_item.text()
+                        self.update_person(original_id_number, first_name, last_name, id_number, birth_date, Bin, Unit, Bed, date, level)
+                else:
+                    # This is a new record, insert it into the database
+                    self.insert_person(first_name, last_name, id_number, birth_date, Bin, Unit, Bed, date, level)
+
             # Remove the used options from drop-downs
             self.remove_used_options(Bin, Unit, Bed)
             print("Data saved to the database.")
         except sqlite3.Error as e:
             print("Error:", e)
+
 
 
     def is_id_number_used(self, id_number):
@@ -263,8 +281,8 @@ class PersonDatabaseApp(QMainWindow):
 
     def remove_used_options(self, Bin, Unit, Bed):
         # Remove used options from the respective drop-downs
-        if Unit in self.unit_bed_options:
-            self.unit_bed_options[Unit].remove(Bed)
+        if Unit in self.unit_bed_options and Bed in self.unit_bed_options[Unit]:
+            self.unit_bed_options[Unit].remove(Bed)  # Check if Bed exists in the list before removing
         self.Bin_input.removeItem(self.Bin_input.findText(Bin))
         self.Bed_input.removeItem(self.Bed_input.findText(Bed))
 
@@ -355,27 +373,35 @@ class PersonDatabaseApp(QMainWindow):
     def edit_person(self):
         selected_row = self.table_widget.currentRow()
         if selected_row >= 0:
-            # Get the data from the selected row
-            first_name = self.table_widget.item(selected_row, 0).text()
-            last_name = self.table_widget.item(selected_row, 1).text()
-            id_number = self.table_widget.item(selected_row, 2).text()
-            birth_date = self.table_widget.item(selected_row, 3).text()
-            Bin = self.table_widget.item(selected_row, 4).text()
-            Unit = self.table_widget.item(selected_row, 5).text()
-            Bed = self.table_widget.item(selected_row, 6).text()
-            date = self.table_widget.item(selected_row, 7).text()
-            level = self.table_widget.item(selected_row, 8).text()
+            # Get the data from the selected row if it exists
+            for col_num in range(self.table_widget.columnCount()):
+                item = self.table_widget.item(selected_row, col_num)
+                if item is not None:
+                    text = item.text()
+                    # Set the corresponding input field with the data from the selected row
+                    if col_num == 0:
+                        self.first_name_input.setText(text)
+                    elif col_num == 1:
+                        self.last_name_input.setText(text)
+                    elif col_num == 2:
+                        self.id_input.setText(text)
+                    elif col_num == 3:
+                        self.birth_date_input.setText(text)
+                    elif col_num == 4:
+                        self.Bin_input.setCurrentText(str(text))  # Use setCurrentText for QComboBox
+                    elif col_num == 5:
+                        self.Unit.setCurrentText(text)
+                    elif col_num == 6:
+                        self.Bed_input.setCurrentText(text)  # Use setCurrentText for QComboBox
+                    elif col_num == 7:
+                        self.date_input.setDate(QDate.fromString(text, "yyyy-MM-dd"))
+                    elif col_num == 8:
+                        self.level_combo.setCurrentText(text)
 
-            # Populate the input fields with the data
-            self.first_name_input.setText(first_name)
-            self.last_name_input.setText(last_name)
-            self.id_input.setText(id_number)
-            self.birth_date_input.setDate(QDate.fromString(birth_date, "yyyy-MM-dd"))
-            self.Bin_input.setCurrentText(Bin)
-            self.Unit.setCurrentText(Unit)
-            self.Bed_input.setCurrentText(Bed)
-            self.date_input.setDate(QDate.fromString(date, "yyyy-MM-dd"))
-            self.level_combo.setCurrentText(level)
+
+
+
+
 
     def insert_person(self, first_name, last_name, id_number, birth_date, Bin, Unit, Bed, date, level):
         try:
