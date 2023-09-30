@@ -68,6 +68,14 @@ class PersonDatabaseApp(QMainWindow):
         self.id_input.setMinimumHeight(30)
         left_layout.addWidget(self.id_input)
 
+        birth_date_label = QLabel("DOB")
+        left_layout.addWidget(birth_date_label)
+
+        self.birth_date_input = QLineEdit()
+        self.birth_date_input.setPlaceholderText("DOB")
+        self.birth_date_input.setMinimumHeight(30)
+        left_layout.addWidget(self.birth_date_input)
+
         Bin_label = QLabel("Bin:")
         left_layout.addWidget(Bin_label)
 
@@ -123,7 +131,7 @@ class PersonDatabaseApp(QMainWindow):
 
         self.table_widget = QTableWidget()
         self.table_widget.setColumnCount(8)
-        self.table_widget.setHorizontalHeaderLabels(["First Name", "Last Name", "ID", "Bin", "Unit", "Bed", "Date", "Level"])
+        self.table_widget.setHorizontalHeaderLabels(["First Name", "Last Name", "ID", "DOB", "Bin", "Unit", "Bed", "Date", "Level"])
         right_layout.addWidget(self.table_widget)
 
         # Enable sorting for the QTableWidget:
@@ -133,7 +141,7 @@ class PersonDatabaseApp(QMainWindow):
         layout.addLayout(left_layout)
         layout.addLayout(right_layout)
 
-        # Create a sub-layout for search and report buttons
+        # Create a sub-layout for buttons
         sub_layout = QVBoxLayout()
 
         self.search_input = QLineEdit()
@@ -154,10 +162,12 @@ class PersonDatabaseApp(QMainWindow):
         # Add the "Release" button for deleting rows
         self.release_button = QPushButton("Release")
         self.release_button.clicked.connect(self.release_person)
+        self.release_button.setMinimumHeight(30)
         sub_layout.addWidget(self.release_button)
 
         self.refresh_button = QPushButton("Refresh")
         self.refresh_button.clicked.connect(self.refresh_database)
+        self.refresh_button.setMinimumHeight(30)
         sub_layout.addWidget(self.refresh_button)
 
 
@@ -176,6 +186,7 @@ class PersonDatabaseApp(QMainWindow):
                 first_name TEXT,
                 last_name TEXT,
                 id_number TEXT,
+                birth_date TEXT,
                 Bin INTEGER,
                 Unit TEXT,
                 Bed TEXT,
@@ -210,6 +221,7 @@ class PersonDatabaseApp(QMainWindow):
         first_name = self.first_name_input.text()
         last_name = self.last_name_input.text()
         id_number = self.id_input.text()
+        birth_date = self.birth_date_input.text()
         Bin = self.Bin_input.currentText()
         Unit = self.Unit.currentText()
         Bed = self.Bed_input.currentText()
@@ -230,9 +242,9 @@ class PersonDatabaseApp(QMainWindow):
         try:
             with self.conn:
                 self.cursor.execute("""
-                    INSERT INTO persons (first_name, last_name, id_number, Bin, Unit, Bed, date, level)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """, (first_name, last_name, id_number, Bin, Unit, Bed, date, level))
+                    INSERT INTO persons (first_name, last_name, id_number, birth_date, Bin, Unit, Bed, date, level)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (first_name, last_name, id_number, birth_date, Bin, Unit, Bed, date, level))
             # Remove the used options from drop-downs
             self.remove_used_options(Bin, Unit, Bed)
             print("Data saved to the database.")
@@ -269,7 +281,7 @@ class PersonDatabaseApp(QMainWindow):
 
         # Specify the columns you want to retrieve, excluding the "ID" column
         self.cursor.execute("""
-            SELECT first_name, last_name, id_number, Bin, Unit, Bed, date, level
+            SELECT first_name, last_name, id_number, birth_date, Bin, Unit, Bed, date, level
             FROM persons
             WHERE first_name LIKE ? OR last_name LIKE ? OR id_number LIKE ? OR Bin LIKE ?
         """, ('%' + search_text + '%', '%' + search_text + '%', '%' + search_text + '%', '%' + search_text + '%'))
@@ -293,7 +305,7 @@ class PersonDatabaseApp(QMainWindow):
 
     def show_all_records(self):
         self.cursor.execute("""
-            SELECT first_name, last_name, id_number, Bin, Unit, Bed, date, level
+            SELECT first_name, last_name, id_number, birth_date, Bin, Unit, Bed, date, level
             FROM persons
         """)
         results = self.cursor.fetchall()

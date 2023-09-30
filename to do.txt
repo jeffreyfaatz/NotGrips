@@ -1,5 +1,5 @@
 NEXT 
-    implement the most recent changes on gpt
+    implement the most recent changes
 
 
 Continue to figureout why the Beds will not update on startup
